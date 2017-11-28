@@ -88,4 +88,4 @@ if __name__ == '__main__':
     print(label_evaluation(truth_file,result_file,delay))
 
 # run example:
-# python evaluation.py 'ground_truth.csv' 'predict.csv' 2
+# python evaluation.py 'ground_truth.hdf' 'predict.csv' 2
