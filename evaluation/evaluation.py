@@ -14,14 +14,14 @@ def get_range_proba(predict, label, delay=7):
     pos = 0
 
     for sp in splits:
-        if is_anomaly and 1 in predict[pos:pos+delay]:
+        if is_anomaly and 1 in predict[pos:pos+delay+1]:
             new_predict[pos: sp] = np.max(predict[pos: sp])
         is_anomaly = not is_anomaly
         pos = sp
     sp = len(label)
 
     if is_anomaly:  #anomaly in the end
-        if 1 in predict[pos: pos + delay]:
+        if 1 in predict[pos: pos + delay+1]:
             new_predict[pos: sp] = np.max(predict[pos: sp])
     return new_predict
 
