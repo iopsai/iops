@@ -55,7 +55,11 @@ def label_evaluation(truth_file, result_file, delay=7):
         return json.dumps(data)
 
 
-    interval = ts[1] - ts[0]
+    interval_list = []
+    for i in range(len(ts)-1):
+        interval_list.append(ts[i+1]-ts[i])
+    interval = min(interval_list)
+
     start_ts = ts[0]
     end_ts = ts[-1]
     index = 0
