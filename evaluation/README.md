@@ -1,6 +1,6 @@
 # Run experiment
 
-python evaluation.py 'ground_truth.hdf' 'predict.csv' 2 
+python evaluation.py 'ground_truth.hdf' 'predict.csv' 7
 
 parameters:
 
@@ -8,4 +8,4 @@ parameters:
 
     predict.csv: the results of user submitted
 
-    2: delay threshold
+    7: delay threshold
