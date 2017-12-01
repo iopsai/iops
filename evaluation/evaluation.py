@@ -3,9 +3,9 @@ import pandas as pd
 import json
 from sys import argv
 from sklearn.metrics import precision_score,recall_score,f1_score
+import numba
 
 # consider delay threshold and missing segments
-
 def get_range_proba(predict, label, delay=7):
 
     splits = np.where(label[1:] != label[:-1])[0] + 1
@@ -23,9 +23,21 @@ def get_range_proba(predict, label, delay=7):
     return new_predict
 
 
-def label_evaluation(truth_file, result_file, delay=7):
-    # have missing timestamps
+# set missing = 0
 
+def reconstruct_label(timestamp, label):
+    timestamp = np.asarray(timestamp, np.int64)
+    timestamp_sorted = np.asarray(timestamp[np.argsort(timestamp)])
+    interval = np.min(np.diff(timestamp_sorted))
+    if interval == 0:
+        print(timestamp_sorted)
+    idx = (timestamp_sorted - timestamp_sorted[0]) // interval
+    new_label = np.zeros(shape=((timestamp_sorted[-1] - timestamp_sorted[0]) // interval + 1,), dtype=np.int)
+    new_label[idx] = label
+    return new_label
+
+
+def label_evaluation(truth_file, result_file, delay=7):
     data = {'result': False, 'data': "", 'message': ""}
     try:
         if result_file[-4:]!='.csv':
@@ -36,50 +48,33 @@ def label_evaluation(truth_file, result_file, delay=7):
     except Exception as e:
         data['message'] =str(e)
         return json.dumps(data)
-
     truth_df = pd.read_hdf(truth_file)
-    truth = truth_df['label'].values
-    ts = truth_df['timestamp'].values
+    kpi_names = truth_df['KPI ID'].values
+    kpi_names = np.unique(kpi_names)
+    y_true_list = []
+    y_pred_list = []
+    for kpi_name in kpi_names:
+        truth = truth_df[truth_df["KPI ID"] == kpi_name]
+        y_true = reconstruct_label(truth["timestamp"], truth["label"])
 
-    try:
-        predict = result_df['predict'].values
-        predict_ts = result_df['timestamp'].values
-    except Exception as e:
-        data['message'] = "The file you submitted need contain 'predict' and 'timestamp' columns"
-        return json.dumps(data)
+        try:
+            result = result_df[result_df["KPI ID"] == kpi_name]
+            y_pred = reconstruct_label(result["timestamp"], result["predict"])
+        except:
+            data['message'] = "The file you submitted need contain 'predict','timestamp' and  \
+                             'KPI ID' columns"
+            return json.dumps(data)
 
-    try:
-        assert np.array_equal(ts,predict_ts) == True
-    except:
-        data['message'] = "The timestamps of your submitted result are wrong"
-        return json.dumps(data)
+        try:
+            assert np.array_equal(y_true,y_pred) == True
+        except:
+            data['message'] = "The length of your submitted file is wrong"
+            return json.dumps(data)
 
-
-    interval_list = []
-    for i in range(len(ts)-1):
-        interval_list.append(ts[i+1]-ts[i])
-    interval = min(interval_list)
-
-    start_ts = ts[0]
-    end_ts = ts[-1]
-    index = 0
-
-    # the labels of missing points are set to zero
-    predict_list = list(predict)
-    truth_list = list(truth)
-
-    for i in range(start_ts,end_ts,interval):
-        if (i not in ts):
-            predict_list.insert(index,0)
-            truth_list.insert(index,0)
-        index += 1
-
-    predict = np.array(predict_list)
-    truth = np.array(truth_list)
-
-
-    new_predict = get_range_proba(predict,truth,delay)
-    fscore = f1_score(truth,new_predict)
+        y_pred = get_range_proba(y_pred, y_true, delay)
+        y_true_list.append(y_true)
+        y_pred_list.append(y_pred)
+    fscore = f1_score(np.concatenate(y_true_list), np.concatenate(y_pred_list))
     data['result'] = True
     data['data'] = fscore
     data['message'] = 'success'
