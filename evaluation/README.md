@@ -1,10 +1,10 @@
 # Run experiment
 
-python evaluation.py 'ground_truth.hdf' 'predict.csv' 7
+python evaluation.py 'truth.hdf' 'predict.csv' 7
 
 parameters:
 
-    ground_truth.hdf: the ground truth file, column names contain KPI ID, timestamp, label
+    truth.hdf: the ground truth file, column names contain KPI ID, timestamp, label
 
     predict.csv: the results of user submitted, column names contain KPI ID, timestamp, predict
     
