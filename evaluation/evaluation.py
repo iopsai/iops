@@ -12,19 +12,21 @@ def get_range_proba(predict, label, delay=7):
     is_anomaly = label[0] == 1
     new_predict = np.array(predict)
     pos = 0
+
     for sp in splits:
-        if is_anomaly and 1 in predict[pos:pos+delay+1]:
+        if is_anomaly and 1 in predict[pos:pos+delay]:
             new_predict[pos: sp] = np.max(predict[pos: sp])
         is_anomaly = not is_anomaly
         pos = sp
     sp = len(label)
-    if is_anomaly:
-        new_predict[pos: sp] = np.max(predict[pos: sp])
+
+    if is_anomaly:  #anomaly in the end
+        if 1 in predict[pos: pos + delay]:
+            new_predict[pos: sp] = np.max(predict[pos: sp])
     return new_predict
 
 
 # set missing = 0
-
 def reconstruct_label(timestamp, label):
     timestamp = np.asarray(timestamp, np.int64)
     timestamp_sorted = np.asarray(timestamp[np.argsort(timestamp)])
@@ -66,14 +68,16 @@ def label_evaluation(truth_file, result_file, delay=7):
             return json.dumps(data)
 
         try:
-            assert np.array_equal(y_true,y_pred) == True
+            assert np.array_equal(len(y_true),len(y_pred)) == True
         except:
             data['message'] = "The length of your submitted file is wrong"
             return json.dumps(data)
-
+        print(y_pred)
         y_pred = get_range_proba(y_pred, y_true, delay)
+        print(y_pred)
         y_true_list.append(y_true)
         y_pred_list.append(y_pred)
+
     fscore = f1_score(np.concatenate(y_true_list), np.concatenate(y_pred_list))
     data['result'] = True
     data['data'] = fscore
@@ -87,4 +91,4 @@ if __name__ == '__main__':
     print(label_evaluation(truth_file,result_file,delay))
 
 # run example:
-# python evaluation.py 'truth.hdf' 'predict.csv' 2
+# python evaluation.py 'ground_truth.hdf' 'predict.csv' 2
