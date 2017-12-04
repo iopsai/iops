@@ -72,9 +72,8 @@ def label_evaluation(truth_file, result_file, delay=7):
         except:
             data['message'] = "The length of your submitted file is wrong"
             return json.dumps(data)
-        print(y_pred)
+        
         y_pred = get_range_proba(y_pred, y_true, delay)
-        print(y_pred)
         y_true_list.append(y_true)
         y_pred_list.append(y_pred)
 
