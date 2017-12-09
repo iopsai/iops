@@ -3,7 +3,6 @@ import pandas as pd
 import json
 from sys import argv
 from sklearn.metrics import precision_score,recall_score,f1_score
-import numba
 
 # consider delay threshold and missing segments
 def get_range_proba(predict, label, delay=7):
@@ -14,8 +13,11 @@ def get_range_proba(predict, label, delay=7):
     pos = 0
 
     for sp in splits:
-        if is_anomaly and 1 in predict[pos:pos+delay+1]:
-            new_predict[pos: sp] = np.max(predict[pos: sp])
+        if is_anomaly:
+            if (1 in predict[pos:pos+delay+1]):
+                new_predict[pos: sp] = np.max(predict[pos: sp])
+            else:
+                new_predict[pos: sp] = 0
         is_anomaly = not is_anomaly
         pos = sp
     sp = len(label)
@@ -23,6 +25,8 @@ def get_range_proba(predict, label, delay=7):
     if is_anomaly:  #anomaly in the end
         if 1 in predict[pos: pos + delay+1]:
             new_predict[pos: sp] = np.max(predict[pos: sp])
+        else:
+            new_predict[pos: sp] = 0
     return new_predict
 
 
@@ -51,6 +55,7 @@ def label_evaluation(truth_file, result_file, delay=7):
         data['message'] =str(e)
         return json.dumps(data)
     truth_df = pd.read_hdf(truth_file)
+
     kpi_names = truth_df['KPI ID'].values
     kpi_names = np.unique(kpi_names)
     y_true_list = []
