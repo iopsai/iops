@@ -39,7 +39,7 @@ def reconstruct_label(timestamp, label):
         print(timestamp_sorted)
     idx = (timestamp_sorted - timestamp_sorted[0]) // interval
     new_label = np.zeros(shape=((timestamp_sorted[-1] - timestamp_sorted[0]) // interval + 1,), dtype=np.int)
-    new_label[idx] = label
+    new_label[idx] = label[np.argsort(timestamp)]
     return new_label
 
 
