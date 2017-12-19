@@ -2,11 +2,11 @@ import numpy as np
 import pandas as pd
 import json
 from sys import argv
-from sklearn.metrics import precision_score,recall_score,f1_score
+from sklearn.metrics import precision_score, recall_score, f1_score
+
 
 # consider delay threshold and missing segments
 def get_range_proba(predict, label, delay=7):
-
     splits = np.where(label[1:] != label[:-1])[0] + 1
     is_anomaly = label[0] == 1
     new_predict = np.array(predict)
@@ -14,7 +14,7 @@ def get_range_proba(predict, label, delay=7):
 
     for sp in splits:
         if is_anomaly:
-            if 1 in predict[pos:min(pos + delay + 1,sp)]:
+            if 1 in predict[pos:min(pos + delay + 1, sp)]:
                 new_predict[pos: sp] = 1
             else:
                 new_predict[pos: sp] = 0
@@ -22,37 +22,46 @@ def get_range_proba(predict, label, delay=7):
         pos = sp
     sp = len(label)
 
-    if is_anomaly:  #anomaly in the end
-        if 1 in predict[pos: min(pos + delay+1,sp)]:
+    if is_anomaly:  # anomaly in the end
+        if 1 in predict[pos: min(pos + delay + 1, sp)]:
             new_predict[pos: sp] = 1
         else:
             new_predict[pos: sp] = 0
+
     return new_predict
 
 
 # set missing = 0
 def reconstruct_label(timestamp, label):
+
     timestamp = np.asarray(timestamp, np.int64)
-    timestamp_sorted = np.asarray(timestamp[np.argsort(timestamp)])
+    index = np.argsort(timestamp)
+
+    timestamp_sorted = np.asarray(timestamp[index])
     interval = np.min(np.diff(timestamp_sorted))
+
+    label = np.asarray(label, np.int64)
+    label = np.asarray(label[index])
     if interval == 0:
         print(timestamp_sorted)
     idx = (timestamp_sorted - timestamp_sorted[0]) // interval
+
     new_label = np.zeros(shape=((timestamp_sorted[-1] - timestamp_sorted[0]) // interval + 1,), dtype=np.int)
     new_label[idx] = label
+
     return new_label
 
 
 def label_evaluation(truth_file, result_file, delay=7):
     data = {'result': False, 'data': "", 'message': ""}
     try:
-        if result_file[-4:]!='.csv':
+        if result_file[-4:] != '.csv':
             data['message'] = 'The file you submitted must be .csv'
             return json.dumps(data)
         else:
             result_df = pd.read_csv(result_file)
     except Exception as e:
-        data['message'] =str(e)
+        data['message'] = str(e)
         return json.dumps(data)
     truth_df = pd.read_hdf(truth_file)
 
@@ -61,6 +70,7 @@ def label_evaluation(truth_file, result_file, delay=7):
     y_true_list = []
     y_pred_list = []
     for kpi_name in kpi_names:
+
         truth = truth_df[truth_df["KPI ID"] == kpi_name]
         y_true = reconstruct_label(truth["timestamp"], truth["label"])
 
@@ -73,26 +83,28 @@ def label_evaluation(truth_file, result_file, delay=7):
             return json.dumps(data)
 
         try:
-            assert np.array_equal(len(y_true),len(y_pred)) == True
+            assert np.array_equal(len(y_true), len(y_pred)) == True
         except:
             data['message'] = "The length of your submitted file is wrong"
             return json.dumps(data)
-        
+
         y_pred = get_range_proba(y_pred, y_true, delay)
         y_true_list.append(y_true)
         y_pred_list.append(y_pred)
+
 
     fscore = f1_score(np.concatenate(y_true_list), np.concatenate(y_pred_list))
     data['result'] = True
     data['data'] = fscore
     data['message'] = 'success'
+
     return json.dumps(data)
 
+
 if __name__ == '__main__':
-
-    _,truth_file,result_file,delay = argv
+    _, truth_file, result_file, delay = argv
     delay = (int)(delay)
-    print(label_evaluation(truth_file,result_file,delay))
+    print(label_evaluation(truth_file, result_file, delay))
 
-# run example:
-# python evaluation.py 'ground_truth.hdf' 'predict.csv' 2
+    # run example:
+    # python evaluation.py 'ground_truth.hdf' 'predict.csv' 2
