@@ -1,6 +1,6 @@
 # Run experiment
 
-python evaluation.py 'truth.hdf' 'predict.csv' 7
+python evaluation.py truth.hdf predict.csv 7
 
 parameters:
 
