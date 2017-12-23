@@ -1,3 +1,4 @@
+# -*- coding:utf-8 -*-
 import numpy as np
 import pandas as pd
 import json
@@ -42,8 +43,9 @@ def reconstruct_label(timestamp, label):
 
     label = np.asarray(label, np.int64)
     label = np.asarray(label[index])
-    if interval == 0:
-        print(timestamp_sorted)
+    # if interval == 0:
+    #     data['message'] = '提交的文件必须是csv格式'
+    #     return json.dumps(data, ensure_ascii=False)
     idx = (timestamp_sorted - timestamp_sorted[0]) // interval
 
     new_label = np.zeros(shape=((timestamp_sorted[-1] - timestamp_sorted[0]) // interval + 1,), dtype=np.int)
@@ -54,51 +56,58 @@ def reconstruct_label(timestamp, label):
 
 def label_evaluation(truth_file, result_file, delay=7):
     data = {'result': False, 'data': "", 'message': ""}
-    try:
-        if result_file[-4:] != '.csv':
-            data['message'] = 'The file you submitted must be .csv'
-            return json.dumps(data)
-        else:
-            result_df = pd.read_csv(result_file)
-    except Exception as e:
-        data['message'] = str(e)
-        return json.dumps(data)
+
+    if result_file[-4:] != '.csv':
+        data['message'] = "提交的文件必须是csv格式"
+        return json.dumps(data,ensure_ascii=False)
+    else:
+        result_df = pd.read_csv(result_file)
+
+    if 'KPI ID' not in result_df.columns or 'timestamp' not in result_df.columns or \
+        'predict' not in result_df.columns:
+        data['message'] = "提交的文件必须包含KPI ID,timestamp,predict三列"
+        return json.dumps(data, ensure_ascii=False)
+
     truth_df = pd.read_hdf(truth_file)
 
     kpi_names = truth_df['KPI ID'].values
     kpi_names = np.unique(kpi_names)
     y_true_list = []
     y_pred_list = []
+
     for kpi_name in kpi_names:
 
         truth = truth_df[truth_df["KPI ID"] == kpi_name]
         y_true = reconstruct_label(truth["timestamp"], truth["label"])
 
-        try:
-            result = result_df[result_df["KPI ID"] == kpi_name]
-            y_pred = reconstruct_label(result["timestamp"], result["predict"])
-        except:
-            data['message'] = "The file you submitted need contain 'predict','timestamp' and  \
-                             'KPI ID' columns"
-            return json.dumps(data)
+        if(kpi_name not in result_df["KPI ID"].values):
+            data['message'] = "提交的文件缺少KPI %s 的结果" % kpi_name
+            return json.dumps(data, ensure_ascii=False)
 
-        try:
-            assert np.array_equal(len(y_true), len(y_pred)) == True
-        except:
-            data['message'] = "The length of your submitted file is wrong"
-            return json.dumps(data)
+        result = result_df[result_df["KPI ID"] == kpi_name]
+
+        if len(truth) != len(result):
+            data['message'] = "文件长度错误"
+            return json.dumps(data,ensure_ascii=False)
+
+        y_pred = reconstruct_label(result["timestamp"], result["predict"])
+
 
         y_pred = get_range_proba(y_pred, y_true, delay)
         y_true_list.append(y_true)
         y_pred_list.append(y_pred)
 
+    try:
+        fscore = f1_score(np.concatenate(y_true_list), np.concatenate(y_pred_list))
+    except:
+        data['message'] = "predict列只能是0或1"
+        return json.dumps(data,ensure_ascii=False)
 
-    fscore = f1_score(np.concatenate(y_true_list), np.concatenate(y_pred_list))
     data['result'] = True
     data['data'] = fscore
-    data['message'] = 'success'
+    data['message'] = '计算成功'
 
-    return json.dumps(data)
+    return json.dumps(data,ensure_ascii=False)
 
 
 if __name__ == '__main__':
@@ -106,5 +115,5 @@ if __name__ == '__main__':
     delay = (int)(delay)
     print(label_evaluation(truth_file, result_file, delay))
 
-    # run example:
-    # python evaluation.py 'ground_truth.hdf' 'predict.csv' 2
+# run example:
+# python evaluation.py 'ground_truth.hdf' 'predict.csv' 2
