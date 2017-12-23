@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import json
 from sys import argv
-from sklearn.metrics import precision_score, recall_score, f1_score
+from sklearn.metrics import f1_score
 
 
 # consider delay threshold and missing segments
@@ -77,7 +77,7 @@ def label_evaluation(truth_file, result_file, delay=7):
         truth = truth_df[truth_df["KPI ID"] == kpi_name]
         y_true = reconstruct_label(truth["timestamp"], truth["label"])
 
-        if (kpi_name not in result_df["KPI ID"].values):
+        if kpi_name not in result_df["KPI ID"].values:
             data['message'] = "提交的文件缺少KPI %s 的结果" % kpi_name
             return json.dumps(data, ensure_ascii=False)
 
@@ -111,5 +111,5 @@ if __name__ == '__main__':
     delay = (int)(delay)
     print(label_evaluation(truth_file, result_file, delay))
 
-    # run example:
-    # python evaluation.py 'ground_truth.hdf' 'predict.csv' 2
+# run example:
+# python evaluation.py 'ground_truth.hdf' 'predict.csv' 2
