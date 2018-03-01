@@ -41,5 +41,8 @@ RUN wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh \
 RUN pip install http://download.pytorch.org/whl/cu90/torch-0.3.1-cp36-cp36m-linux_x86_64.whl
 RUN pip install torchvision
 
+RUN pip install pandas dill tables
 
-COPY client.py /client.py
+
+COPY test.py /test.py
+COPY train.py /train.py

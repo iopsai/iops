@@ -1,5 +1,5 @@
 import unittest
-from .monitor import *
+from .monitor_test import *
 
 
 class TestReadNonEmptyLine(unittest.TestCase):

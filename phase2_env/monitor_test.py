@@ -1,17 +1,3 @@
-"""
-Working Process:
-    (bounding quotes is not included.)
-    ("${}" means the corresponding value)
-    (lines separator is \n)
-    While there are KPIs:
-        Send one line: "{'KPI ID':'${KPI ID}'}"
-        While there are points in this KPI:
-            Send one line: "{"timestamp": ${timestamp}, "value": ${value}}"
-            Wait one line in this format: "{"predict": ${predict, 0 for normal, 1 for anomaly}}".
-            If get wrong format or time limit exceed, MONITOR will ignore it and assume the predict is 0, then continue.
-        Send one line: "KPI FINISH"
-    Send on line "EXIT"
-"""
 import click
 import subprocess
 import logging
@@ -20,11 +6,11 @@ import numpy as np
 import shlex
 import sys
 import tempfile
+import json
 from evaluation.evaluation import label_evaluation
 
-TIME_LIMIT = 5  # seconds
 DELAY = 7
-COMMAND = "sudo nvidia-docker run -i --rm --ipc=host -v /home/v-zyl14/:/home/v-zyl14 {image_name} {command}"
+TIME_LIMIT = 5  # seconds
 
 logging.basicConfig(
     level='INFO',
@@ -34,17 +20,22 @@ logging.basicConfig(
 logger = logging.getLogger(__file__)
 
 
-@click.command("Monitor")
-@click.option("--image-name", "-i", help="The docker image name")
-@click.option("--client-command", "-c", help="What command to run in the docker container")
-@click.option("--ground-truth-path", "-f", help="Path to ground truth file")
-def main(image_name, client_command, ground_truth_path):
-    # create client subprocess
-    command = COMMAND.format(image_name=image_name, command=client_command)
-    logging.info("Run command: {}".format(command))
-    client = subprocess.Popen(shlex.split(command), stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                              universal_newlines=True, bufsize=1)
-    logger.info("Create client successfully.")
+@click.command("Phase2 Test")
+@click.option("--config-file-path", "-c", default="", help="Path to config JSON file, leave empty to use stdin")
+@click.option("--ground-truth-path", "-g", help="Path to ground truth data, which is supposed to be a hdf file including at least three columns: KPI ID, timestamp, label")
+def main(config_file_path, ground_truth_path):
+    if config_file_path == "":
+        config_file = sys.stdin
+    else:
+        config_file = open(config_file_path, "r")
+    config_list = json.load(config_file)  # type: list
+    list(map(lambda team_config: test(ground_truth_path, team_config), config_list))
+
+
+def test(ground_truth_path, team_config):
+    image_name = team_config["uuid"]
+    test_command = team_config["test"]
+    persist_path = team_config["persist"]
 
     # read ground truth and prepare dataframe to store predicts
     ground_truth_dataframe = pd.read_hdf(ground_truth_path)
@@ -54,12 +45,14 @@ def main(image_name, client_command, ground_truth_path):
     # main process
     for kpi_id in kpi_id_list:
         logger.info("KPI ID: {}".format(kpi_id))
+        # create client subprocess
+        command = "sudo nvidia-docker run -i --rm --ipc=host -v {persist}:{persist}:ro {image_name} {command} \"{persist}\" \"{kpi}\"".format(image_name=image_name, command=test_command, kpi=kpi_id, persist=persist_path)
+        logging.info("Run command: {}".format(command))
+        client = subprocess.Popen(shlex.split(command), stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                  universal_newlines=True, bufsize=0)
+        logger.info("Create client successfully.")
         # create dataframe to store predicts
         kpi_predict_dataframe = pd.DataFrame()
-
-        # send KPI ID
-        print({"KPI ID": kpi_id}, file=client.stdin)
-        client.stdin.flush()
 
         # read ground truth and sort by timestamp in ascending order
         kpi_ground_truth = ground_truth_dataframe[ground_truth_dataframe["KPI ID"] == kpi_id]
@@ -72,18 +65,17 @@ def main(image_name, client_command, ground_truth_path):
         predict_list = []
         for timestamp, value in zip(timestamps, values):
             # send timestamp and value
-            print({"timestamp": timestamp, "value": value}, file=client.stdin)
-            client.stdin.flush()
+            print(json.dumps({"timestamp": int(timestamp), "value": float(value)}), file=client.stdin)
             # receive timestamp
             predict = 0
             try:
                 line = read_non_empty_line(client.stdout)
                 line.rstrip("\n")
                 logger.info("Receive: {}".format(line))
-                predict = eval(line)["predict"]
+                predict = json.loads(line)["predict"]
             except KeyError:  # no "predict" key in response
                 pass
-            except SyntaxError:  # can't eval response as a dict
+            except json.JSONDecodeError:  # can't eval response as a dict
                 pass
             predict_list.append(predict)
 
@@ -91,9 +83,9 @@ def main(image_name, client_command, ground_truth_path):
         kpi_predict_dataframe["predict"] = np.asarray(predict_list, np.int)
         kpi_predict_dataframe["KPI ID"] = kpi_id
         predict_dataframe_list.append(kpi_predict_dataframe)
+
         print("KPI FINISH", file=client.stdin)
-        client.stdin.flush()
-    print("EXIT", file=client.stdin)
+        client.wait()
     predict_dataframe = pd.concat(predict_dataframe_list)   # type: pd.DataFrame
     predict_file = tempfile.NamedTemporaryFile(suffix=".csv")
     predict_dataframe.to_csv(predict_file.name, index=None)
