@@ -65,16 +65,14 @@ def test(ground_truth_path, team_config):
         predict_list = []
         for timestamp, value in zip(timestamps, values):
             # send timestamp and value
-            print(json.dumps({"timestamp": int(timestamp), "value": float(value)}), file=client.stdin)
+            print("{},{}".format(timestamp, value), file=client.stdin)
             # receive timestamp
             predict = 0
             try:
                 line = read_non_empty_line(client.stdout)
                 line.rstrip("\n")
                 logger.info("Receive: {}".format(line))
-                predict = json.loads(line)["predict"]
-            except KeyError:  # no "predict" key in response
-                pass
+                predict = int(line)
             except json.JSONDecodeError:  # can't eval response as a dict
                 pass
             predict_list.append(predict)

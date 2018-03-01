@@ -9,7 +9,7 @@ def main():
     persist_path = sys.argv[1]
     train_data_path = sys.argv[2]
 
-    df = pd.read_hdf(train_data_path)
+    df = pd.read_csv(train_data_path)
 
     # test read train data file
     kpi_ids = list(set(df["KPI ID"]))

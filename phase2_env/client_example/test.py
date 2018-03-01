@@ -9,6 +9,7 @@ import json
 logging.basicConfig(
     level='INFO',
     format='%(asctime)s [%(levelname)s]: %(message)s',
+    stream=sys.stderr
 )
 logger = logging.getLogger(__file__)
 
@@ -23,8 +24,11 @@ def main():
         logger.info("Client Recv: {}".format(line))
         if "KPI FINISH" in line:
             break
-        point = json.loads(line)
-        ret = json.dumps({"predict": sign * int(point["value"] >= 0.0)})
+        timestamp, value = line.split(",")
+        timestamp = int(timestamp)
+        value = float(value)
+        logger.info("Timestamp: {}, Value: {}".format(timestamp, value))
+        ret = sign * int(value >= 0.0)
         print(ret)
         logger.info("Client Send: {}".format(ret))
         sys.stdout.flush()

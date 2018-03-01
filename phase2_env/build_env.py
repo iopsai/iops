@@ -1,6 +1,5 @@
 import click
 import os
-import uuid
 import json
 import logging
 import sys
@@ -19,6 +18,7 @@ logger = logging.getLogger(__file__)
 def main(base_dir, output):
     config_list = []
     for context in os.listdir(base_dir):
+        uuid = os.path.basename(context)
         context = os.path.realpath(os.path.join(base_dir, context))
         if not os.path.isdir(context):
             continue
@@ -30,13 +30,18 @@ def main(base_dir, output):
             continue
         with open(config_path, "rb+") as f:
             config = json.load(f)
-        config["uuid"] = str(uuid.uuid3(uuid.NAMESPACE_URL, config["team"]))  # generate uuid based on team name
+        config["uuid"] = uuid  # generate uuid based on team name
         config["persist"] = "/srv/iops_phase2/{}".format(config["uuid"])
-        os.makedirs(config["persist"], exist_ok=True)
-        config_list.append(config)
-        logger.info(config)
+
         # build docker image
-        os.system("sudo nvidia-docker build {context} -t {tag}".format(context=context, tag=config["uuid"]))
+        ret = os.system("sudo nvidia-docker build {context} -t {tag}".format(context=context, tag=config["uuid"]))
+        if ret != 0:
+            logger.error("Build Docker Image for {} Failed".format(context))
+            continue
+
+        os.makedirs(config["persist"], exist_ok=True)
+        logger.info(config)
+        config_list.append(config)
         logger.info("Build Docker image successfully")
     if output is None:
         output = sys.stdout
