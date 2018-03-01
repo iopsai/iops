@@ -51,6 +51,12 @@ def test(ground_truth_path, team_config):
         client = subprocess.Popen(shlex.split(command), stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                   universal_newlines=True, bufsize=0)
         logger.info("Create client successfully.")
+        while True:
+            line = read_non_empty_line(client.stdout)
+            line = line.rstrip("\r\n")
+            print(line)
+            if line == "IOPS Phase2 Test Ready":
+                break
         # create dataframe to store predicts
         kpi_predict_dataframe = pd.DataFrame()
 
@@ -68,13 +74,13 @@ def test(ground_truth_path, team_config):
             print("{},{}".format(timestamp, value), file=client.stdin)
             # receive timestamp
             predict = 0
+            line = read_non_empty_line(client.stdout)
+            line.rstrip("\r\n")
+            logger.info("Monitor Receive: {}".format(line))
             try:
-                line = read_non_empty_line(client.stdout)
-                line.rstrip("\n")
-                logger.info("Receive: {}".format(line))
                 predict = int(line)
-            except json.JSONDecodeError:  # can't eval response as a dict
-                pass
+            except ValueError:
+                logging.error("Parse message as int failed, use default value 0. Recv: {}".format(line))
             predict_list.append(predict)
 
         kpi_predict_dataframe["timestamp"] = timestamps
