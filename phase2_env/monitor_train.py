@@ -31,7 +31,7 @@ def train(train_data_path, team_config):
 
 @click.command("Phase2 Train")
 @click.option("--config-file-path", "-c", default="", help="Path to config JSON file, leave empty to use stdin")
-@click.option("--train-data-path", "-t", help="Path to train data, which is supposed to be a hdf file including at least three columns: KPI ID, timestamp, value")
+@click.option("--train-data-path", "-t", help="Path to train data, which is supposed to be a csv file including at least three columns: KPI ID, timestamp, value")
 def main(config_file_path, train_data_path):
     train_data_path = os.path.realpath(train_data_path)
     config_file_path = os.path.realpath(config_file_path)
