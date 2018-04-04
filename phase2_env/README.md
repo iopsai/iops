@@ -24,7 +24,7 @@
 
 请参考`client_example` 
 
-在当前目录运行`test.sh`，并且把Docker Context文件夹放在这里（和`client_example`同级），可以测试是否能够正确运行
+在当前目录运行`test.sh`（这个脚本是在模拟之后的主办方操作流程），并且把Docker Context文件夹放在这里（和`client_example`同级），可以测试是否能够正确运行。
 
 # 主办方操作流程
 
