@@ -28,7 +28,7 @@ def main(base_dir, output):
         if not os.path.isfile(config_path):
             logger.error("Can't find config.json. Skip {}".format(context))
             continue
-        with open(config_path, "rb+") as f:
+        with open(config_path, "r+") as f:
             config = json.load(f)
         config["uuid"] = uuid  # generate uuid based on team name
         config["persist"] = "/srv/iops_phase2/{}".format(config["uuid"])
