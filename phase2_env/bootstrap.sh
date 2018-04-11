@@ -59,4 +59,4 @@ echo "export LC_ALL=C.UTF-8" >> ~/.bashrc
 echo "export LANG=C.UTF-8" >> ~/.bashrc
 source ~/.bashrc
 conda install click pandas --yes
-pip insall sklearn scipy
+pip insall sklearn scipy tables
