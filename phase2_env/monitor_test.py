@@ -15,7 +15,7 @@ TIME_LIMIT = 5  # seconds
 logging.basicConfig(
     level='INFO',
     format='%(asctime)s [%(levelname)s]: %(message)s',
-    stream=sys.stdout,
+    filename="/var/log/monitor_test.log",
 )
 logger = logging.getLogger(__file__)
 
