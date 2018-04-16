@@ -28,11 +28,13 @@
 
 # 主办方操作流程
 
-1. 把选手准备好的Docker Context文件夹拷贝到新虚拟机的某个目录下
+1. 运行`bootstrap.sh`配置新虚拟机的环境
 
-2. 检查每个选手的Dockerfile，主要针对可能的作弊行为。
+2. 把选手准备好的Docker Context文件夹拷贝到新虚拟机的某个目录下
 
-3. 编译Docker镜像，准备每个选手会用到的可写入路径等资源
+3. 检查每个选手的Dockerfile，主要针对可能的作弊行为。
+
+4. 编译Docker镜像，准备每个选手会用到的可写入路径等资源
 
    ```bash
    python build_env.py -b ${存放context文件夹的目录} -o ${输出配置文件路径}
@@ -40,7 +42,7 @@
 
    输出文件是一个JSON文件，包含每个队伍的队名，镜像名，操作命令，存储路径等信息。
 
-4. 训练
+5. 训练
 
    ```bash
    python monitor_train.py -c ${配置文件路径} -t ${训练数据路径}
@@ -48,13 +50,13 @@
 
    训练数据是一个CSV文件，包含了所有KPI的时间戳，值，标注，名字等信息。
 
-5. 测试
+6. 测试
 
-   ```bash
-   python monitor_test.py -c ${配置文件路径} -t ${Ground Truth路径}
-   ```
+```bash
+python monitor_test.py -c ${配置文件路径} -t ${Ground Truth路径}
+```
 
-   测试数据是一个HDF文件，包含了所有KPI的时间戳，标注，名字等信息。
+测试数据是一个HDF文件，包含了所有KPI的时间戳，标注，名字等信息。
 
 # 训练流程
 
