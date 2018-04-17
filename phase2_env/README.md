@@ -53,7 +53,7 @@
 6. 测试
 
 ```bash
-python monitor_test.py -c ${配置文件路径} -t ${Ground Truth路径}
+python monitor_test.py -c ${配置文件路径} -g ${Ground Truth路径}
 ```
 
 测试数据是一个HDF文件，包含了所有KPI的时间戳，标注，名字等信息。
